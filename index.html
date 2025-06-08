@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>時計</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Kosugi+Maru&display=swap" rel="stylesheet">
+    <style>
+        /*
+  Josh's Custom CSS Reset
+  https://www.joshwcomeau.com/css/custom-css-reset/
+*/
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box
+        }
+
+        * {
+            margin: 0
+        }
+
+        @media (prefers-reduced-motion:no-preference) {
+            html {
+                interpolate-size: allow-keywords
+            }
+        }
+
+        body {
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased
+        }
+
+        img,
+        picture,
+        video,
+        canvas,
+        svg {
+            display: block;
+            max-width: 100%
+        }
+
+        input,
+        button,
+        textarea,
+        select {
+            font: inherit
+        }
+
+        p,
+        h1,
+        h2,
+        h3,
+        h4,
+        h5,
+        h6 {
+            overflow-wrap: break-word
+        }
+
+        p {
+            text-wrap: pretty
+        }
+
+        h1,
+        h2,
+        h3,
+        h4,
+        h5,
+        h6 {
+            text-wrap: balance
+        }
+
+        #root,
+        #__next {
+            isolation: isolate
+        }
+    </style>
+</head>
+
+<body>
+    <div id="clock-container">
+        <div class="time-display">
+            <h2 class="jp-font">日本標準時 (JST)</h2>
+            <div id="jst-time" class="seven-segment"></div>
+        </div>
+        <div class="time-display">
+            <h2 class="jp-font">世界標準時 (UTC)</h2>
+            <div id="utc-time" class="seven-segment"></div>
+        </div>
+    </div>
+
+    <style>
+        @font-face {
+            font-family: 'DSEG7';
+            src: url('./DSEG7ClassicMini-Italic.woff') format('woff');
+            font-weight: normal;
+            font-style: normal;
+        }
+
+
+        #clock-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background-color: #000;
+            color: #fff;
+        }
+
+        .time-display {
+            margin: 50px 0;
+            color: #fff;
+            text-align: center;
+        }
+
+        .time-display .jp {
+            font-family: 'Kosugi Maru', sans-serif;
+
+            font-size: 3rem;
+            color: #d0d0d0;
+        }
+
+        .time-display h2 {
+            margin-bottom: 15px;
+            font-size: 2rem;
+            color: #000000;
+            width: 100vw;
+            background-color: #ffffff;
+        }
+
+        .seven-segment {
+            width: 100vw;
+            font-family: 'DSEG7', monospace;
+            font-size: 4rem;
+            font-weight: bold;
+            color: #ffffff;
+            background-color: #000000;
+            padding: 20px;
+            border-radius: 0px;
+            border: 2px solid #000000;
+            letter-spacing: 0.1em;
+        }
+
+
+        .jp-font {
+            font-family: 'Kosugi Maru', sans-serif;
+            color: #000000;
+            font-size: 50px;
+        }
+    </style>
+    <script>
+        function updateTime() {
+            const now = new Date();
+
+            // JST (UTC+9)
+            const jstTime = new Date(now.getTime() + (9 * 60 * 60 * 1000));
+            const jstYear = jstTime.getUTCFullYear();
+            const jstMonth = String(jstTime.getUTCMonth() + 1).padStart(2, '!');
+            const jstDate = String(jstTime.getUTCDate()).padStart(2, '!');
+            const jstHours = String(jstTime.getUTCHours()).padStart(2, '!');
+            const jstMinutes = String(jstTime.getUTCMinutes()).padStart(2, '!');
+            const jstSeconds = String(jstTime.getUTCSeconds()).padStart(2, '!');
+
+            // UTC
+            const utcYear = now.getUTCFullYear();
+            const utcMonth = String(now.getUTCMonth() + 1).padStart(2, '!');
+            const utcDate = String(now.getUTCDate()).padStart(2, '!');
+            const utcHours = String(now.getUTCHours()).padStart(2, '!');
+            const utcMinutes = String(now.getUTCMinutes()).padStart(2, '!');
+            const utcSeconds = String(now.getUTCSeconds()).padStart(2, '!');
+
+            document.getElementById('jst-time').innerHTML = `${jstYear}<span class="jp">年</span>${jstMonth}<span
+        class="jp">月</span>${jstDate}<span class="jp">日</span>　${jstHours}<span class="jp">時</span>${jstMinutes}<span
+        class="jp">分</span>${jstSeconds}<span class="jp">秒</span>`;
+            document.getElementById('utc-time').innerHTML = `${utcYear}<span class="jp">年</span>${utcMonth}<span
+        class="jp">月</span>${utcDate}<span class="jp">日</span>　${utcHours}<span class="jp">時</span>${utcMinutes}<span
+        class="jp">分</span>${utcSeconds}<span class="jp">秒</span>`;
+        }
+
+        // Update time immediately and then every second
+        updateTime();
+        setInterval(updateTime, 1000);
+    </script>
+</body>
+
+</html>
