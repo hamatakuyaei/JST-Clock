@@ -13,3 +13,32 @@ NICT（情報通信研究機構）の時刻サーバーと同期する高精度�
 ## フォントについて
 ７セグのフォントにけしかん様のDSEGというフォントを使用させていただいております。高機能なセグメントフォントです。（ https://github.com/keshikan/DSEG ）
 Font "DSEG" by けしかん
+
+## PWA（プログレッシブウェブアプリ）化について
+
+このリポジトリに対して簡易的なPWA対応を追加しました。変更点:
+
+- `manifest.json` を追加（アプリ名、アイコン、テーマカラー、表示モードなど）
+- `sw.js`（Service Worker）を追加してコア資産をキャッシュし、オフライン表示をサポート
+- `icons/` に SVG のデモ用アイコンを追加
+- `index.html` にマニフェストリンクと Service Worker 登録コードを追加
+
+ブラウザで PWA を試す手順（ローカル）:
+
+1. ローカルで簡易 HTTP サーバーを立てます（ファイル:// では Service Worker が動作しないため）。PowerShell の場合の例:
+
+```powershell
+# Python が入っている場合
+python -m http.server 8000
+
+# または PowerShell で別方法
+# Start-Process "python" -ArgumentList '-m','http.server','8000'
+```
+
+2. ブラウザで `http://localhost:8000/` にアクセスします。
+3. デベロッパーツールの Application（または Storage）パネルでマニフェスト、Service Worker、キャッシュが登録されていることを確認できます。
+4. モバイル端末や Chromium 系ブラウザでは「ホーム画面に追加」などで PWA としてインストールできます。
+
+注意:
+- ここで追加した Service Worker は簡易的なキャッシュ戦略です。より堅牢な運用（アセットのバージョニング、更新ポリシー、キャッシュの優先度管理、オフライン UI）を行う場合は実装の拡張を検討してください。
+

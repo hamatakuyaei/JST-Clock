@@ -8,6 +8,9 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Kosugi+Maru&display=swap" rel="stylesheet">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#000000">
+    <link rel="apple-touch-icon" href="icons/icon-192.svg">
     <style>
         /*
   Josh's Custom CSS Reset
@@ -82,7 +85,7 @@
     </style>
 </head>
 
-<body>
+<body style="">
     <div id="clock-container">
         <div class="time-display">
             <h2 class="jp-font">日本標準時 (JST)</h2>
@@ -102,6 +105,10 @@
     </div>
 
     <style>
+        body {
+            background-color: #000;
+        }
+
         @font-face {
             font-family: 'DSEG7';
             src: url('./DSEG7ClassicMini-Italic.woff') format('woff');
@@ -344,114 +351,196 @@
         .pb-0 {
             padding-bottom: 0 !important;
         }
+
+        /* Portrait (height > width) -> rotate whole clock 90deg */
+        .rotate-90 {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            /* swap dimensions so content fits after rotation */
+            width: 100vh;
+            height: 100vw;
+            transform: translate(-50%, -50%) rotate(90deg);
+            transform-origin: center center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        /* When rotated, make inner elements size relative to the rotated container */
+        .rotate-90 .time-display,
+        .rotate-90 .seven-segment,
+        .rotate-90 .time-display h2 {
+            width: 100% !important;
+        }
+
+        /* Prevent horizontal scroll after rotation */
+        body.rotate-active {
+            overflow: hidden;
+        }
     </style>
     <script>
-        let timeOffset = 0; // サーバーとクライアントの時差
-        let lastSyncTime = 0; // 最後に同期した時刻
+        // 定数
+        const NICT_API_URL = 'https://67495dde3b39c2991829589f0101ab7a035eecf5.nict.go.jp/cgi-bin/json';
+        const JST_OFFSET = 9 * 60 * 60 * 1000;
+        const SYNC_INTERVAL_MS = 30000;
+        const UPDATE_INTERVAL_MS = 100;
+
+        // 状態管理
+        let timeOffset = 0;
+        let lastSyncTime = 0;
         let syncInterval = null;
 
-        // NICT時刻サーバーから時刻を取得してオフセットを計算
+        // DOM取得
+        const elJst = document.getElementById('jst-time');
+        const elUtc = document.getElementById('utc-time');
+        const elUnix = document.getElementById('unix-time');
+        const elSyncStatus = document.getElementById('sync-status');
+
+        // NICT時刻サーバーと同期
         async function syncWithNICT() {
             try {
                 const requestStart = Date.now();
-                const response = await fetch('https://67495dde3b39c2991829589f0101ab7a035eecf5.nict.go.jp/cgi-bin/json');
+                const response = await fetch(`${NICT_API_URL}?${requestStart}`, { cache: 'no-store' });
                 const requestEnd = Date.now();
-
-                if (!response.ok) {
-                    throw new Error('NICT時刻サーバーとの通信に失敗しました');
-                }
-
+                if (!response.ok) throw new Error('NICT時刻サーバーとの通信に失敗しました');
                 const data = await response.json();
-                const networkDelay = (requestEnd - requestStart) / 2; // ネットワーク遅延の推定
-
-                // NICTのタイムスタンプをミリ秒に変換
+                const networkDelay = (requestEnd - requestStart) / 2;
                 const serverTime = (data.st * 1000) + networkDelay;
                 const clientTime = Date.now();
-
                 timeOffset = serverTime - clientTime;
                 lastSyncTime = clientTime;
-
-                document.getElementById('sync-status').textContent =
-                    `NICT同期完了: ${new Date(lastSyncTime).toLocaleTimeString()} (オフセット: ${timeOffset.toFixed(0)}ms)`;
-
+                if (elSyncStatus) {
+                    elSyncStatus.textContent = `NICT同期完了: ${new Date(lastSyncTime).toLocaleTimeString()} (オフセット: ${timeOffset.toFixed(0)}ms)`;
+                }
                 console.log(`NICT時刻サーバーと同期完了。オフセット: ${timeOffset}ms`);
-
             } catch (error) {
                 console.error('NICT時刻サーバーとの同期に失敗:', error);
-                document.getElementById('sync-status').textContent =
-                    `同期エラー: ${error.message}`;
+                if (elSyncStatus) {
+                    elSyncStatus.textContent = `同期エラー: ${error.message}`;
+                }
             }
         }
 
-        // 現在の正確な時刻を取得（NICTオフセットを考慮）
+        // NICTオフセット考慮の現在時刻
         function getAccurateTime() {
             return new Date(Date.now() + timeOffset);
         }
 
+        // 時刻表示のHTML生成
+        function formatTimeHTML(year, month, date, hours, minutes, seconds) {
+            return `${year}<span class="jp">年</span>${month}<span class="jp">月</span>${date}<span class="jp">日</span>${hours}<span class="jp">時</span>${minutes}<span class="jp">分</span>${seconds}<span class="jp">秒</span>`;
+        }
+
+        // 時刻更新
         function updateTime() {
             const now = getAccurateTime();
-
-            // JST (UTC+9)
-            const jstTime = new Date(now.getTime() + (9 * 60 * 60 * 1000));
-            const jstYear = jstTime.getUTCFullYear();
-            const jstMonth = String(jstTime.getUTCMonth() + 1).padStart(2, '!');
-            const jstDate = String(jstTime.getUTCDate()).padStart(2, '!');
-            const jstHours = String(jstTime.getUTCHours()).padStart(2, '!');
-            const jstMinutes = String(jstTime.getUTCMinutes()).padStart(2, '!');
-            const jstSeconds = String(jstTime.getUTCSeconds()).padStart(2, '!');
-
-            // UTC
-            const utcYear = now.getUTCFullYear();
-            const utcMonth = String(now.getUTCMonth() + 1).padStart(2, '!');
-            const utcDate = String(now.getUTCDate()).padStart(2, '!');
-            const utcHours = String(now.getUTCHours()).padStart(2, '!');
-            const utcMinutes = String(now.getUTCMinutes()).padStart(2, '!');
-            const utcSeconds = String(now.getUTCSeconds()).padStart(2, '!');
-
-            // UNIX Time (秒単位)
-            const unixTimeSeconds = Math.floor(now.getTime() / 1000);
-
-            document.getElementById('jst-time').innerHTML = `${jstYear}<span class="jp">年</span>${jstMonth}<span
-        class="jp">月</span>${jstDate}<span class="jp">日</span>${jstHours}<span class="jp">時</span>${jstMinutes}<span
-        class="jp">分</span>${jstSeconds}<span class="jp">秒</span>`;
-
-            document.getElementById('utc-time').innerHTML = `${utcYear}<span class="jp">年</span>${utcMonth}<span
-        class="jp">月</span>${utcDate}<span class="jp">日</span>${utcHours}<span class="jp">時</span>${utcMinutes}<span
-        class="jp">分</span>${utcSeconds}<span class="jp">秒</span>`;
-
-            document.getElementById('unix-time').innerHTML = `${unixTimeSeconds}<span class="jp">秒</span>`;
-        }
-
-        // 初期化処理
-        async function init() {
-            // 初回同期
-            await syncWithNICT();
-
-            // 時計の更新開始
-            updateTime();
-            setInterval(updateTime, 100);
-
-            // 定期的にNICT時刻サーバーと同期（30秒ごと）
-            syncInterval = setInterval(syncWithNICT, 30000);
-        }
-
-        // ページロード時に初期化
-        init();
-
-        // ページがフォーカスを取り戻した時に再同期
-        document.addEventListener('visibilitychange', () => {
-            if (!document.hidden) {
-                syncWithNICT();
+            // JST
+            const jst = new Date(now.getTime() + JST_OFFSET);
+            if (elJst) {
+                elJst.innerHTML = formatTimeHTML(
+                    jst.getUTCFullYear(),
+                    String(jst.getUTCMonth() + 1).padStart(2, '!'),
+                    String(jst.getUTCDate()).padStart(2, '!'),
+                    String(jst.getUTCHours()).padStart(2, '!'),
+                    String(jst.getUTCMinutes()).padStart(2, '!'),
+                    String(jst.getUTCSeconds()).padStart(2, '!')
+                );
             }
+            // UTC
+            if (elUtc) {
+                elUtc.innerHTML = formatTimeHTML(
+                    now.getUTCFullYear(),
+                    String(now.getUTCMonth() + 1).padStart(2, '!'),
+                    String(now.getUTCDate()).padStart(2, '!'),
+                    String(now.getUTCHours()).padStart(2, '!'),
+                    String(now.getUTCMinutes()).padStart(2, '!'),
+                    String(now.getUTCSeconds()).padStart(2, '!')
+                );
+            }
+            // UNIX Time
+            if (elUnix) {
+                elUnix.innerHTML = `${Math.floor(now.getTime() / 1000)}<span class="jp">秒</span>`;
+            }
+        }
+
+        // 初期化
+        async function initClock() {
+            await syncWithNICT();
+            updateTime();
+            setInterval(updateTime, UPDATE_INTERVAL_MS);
+            syncInterval = setInterval(syncWithNICT, SYNC_INTERVAL_MS);
+        }
+
+        // 回転判定
+        function applyRotationIfPortrait() {
+            const isPortrait = window.innerHeight > window.innerWidth;
+            const body = document.body;
+            const clockContainer = document.getElementById('clock-container');
+            if (!clockContainer) return;
+            if (isPortrait) {
+                body.classList.add('rotate-active');
+                clockContainer.classList.add('rotate-90');
+                clockContainer.style.minHeight = '100vw';
+                clockContainer.style.left = '40%';
+            } else {
+                body.classList.remove('rotate-active');
+                clockContainer.classList.remove('rotate-90');
+                clockContainer.style.minHeight = '100vh';
+                clockContainer.style.left = '';
+            }
+        }
+
+        // イベント登録
+        window.addEventListener('load', () => {
+            applyRotationIfPortrait();
+            initClock();
+        });
+        window.addEventListener('resize', () => {
+            clearTimeout(window._rotateTimer);
+            window._rotateTimer = setTimeout(applyRotationIfPortrait, 80);
+        });
+        window.addEventListener('orientationchange', () => setTimeout(applyRotationIfPortrait, 120));
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) syncWithNICT();
+        });
+    </script>
+    <script>
+        // Service Worker registration for PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('Service Worker registered.', reg))
+                    .catch(err => console.warn('Service Worker registration failed:', err));
+            });
+        }
+
+        // Basic beforeinstallprompt handling (show native install prompt later)
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e; // Stash the event for later use
+            // You could show an install button here and call deferredPrompt.prompt()
+            console.log('beforeinstallprompt fired');
         });
 
-        // オリエンテーション変更時の対応
-        window.addEventListener('orientationchange', () => {
-            setTimeout(() => {
-                // レイアウトの再計算を強制
-                const container = document.getElementById('clock-container');
-                container.style.minHeight = '100vh';
-            }, 100);
+        // キーボードによる手動同期: 'r' または 'R' が押されたら NICT と同期
+        document.addEventListener('keydown', (e) => {
+            try {
+                if (!e || !e.key) return;
+                if (e.key.toLowerCase() === 'r') {
+                    const statusEl = document.getElementById('sync-status');
+                    if (statusEl) {
+                        statusEl.style.display = 'block';
+                        statusEl.textContent = '手動同期中...';
+                    }
+                    // 非同期で同期処理を呼び出す（既存の同期関数を再利用）
+                    syncWithNICT();
+                }
+            } catch (err) {
+                console.warn('手動同期エラー:', err);
+            }
         });
     </script>
 </body>
