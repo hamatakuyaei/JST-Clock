@@ -8,6 +8,9 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Kosugi+Maru&display=swap" rel="stylesheet">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#000000">
+    <link rel="apple-touch-icon" href="icons/icon-192.svg">
     <style>
         /*
   Josh's Custom CSS Reset
@@ -103,6 +106,10 @@
     </div>
 
     <style>
+        body {
+            background-color: #000;
+        }
+
         @font-face {
             font-family: 'DSEG7';
             src: url('./DSEG7ClassicMini-Italic.woff') format('woff');
@@ -442,6 +449,13 @@
         // ページがフォーカスを取り戻した時に再同期
         document.addEventListener('visibilitychange', () => {
             if (!document.hidden) {
+                syncWithNICT();
+            }
+        });
+
+        // キーボードでrキーを押したときに再同期
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'r' || event.key === 'R') {
                 syncWithNICT();
             }
         });
