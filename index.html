@@ -34,6 +34,7 @@
             -webkit-font-smoothing: antialiased;
             -webkit-text-size-adjust: 100%;
             -ms-text-size-adjust: 100%;
+            background-color: #000;
         }
 
         img,
@@ -445,12 +446,53 @@
             }
         });
 
+        // 画面の向きに応じて回転を適用
+        function applyRotation() {
+            const container = document.getElementById('clock-container');
+            const height = window.innerHeight;
+            const width = window.innerWidth;
+
+            if (height > width) {
+                // 縦の方が長い場合、90度回転
+                container.style.transform = 'rotate(90deg)';
+                container.style.transformOrigin = 'center center';
+                // 回転後のサイズ調整
+                container.style.width = `${height}px`;
+                container.style.height = `${width}px`;
+                container.style.position = 'fixed';
+                container.style.top = '50%';
+                container.style.left = '50%';
+                container.style.marginTop = `-${width / 2}px`;
+                container.style.marginLeft = `-${height / 2}px`;
+            } else {
+                // 横の方が長い場合、回転なし
+                container.style.transform = '';
+                container.style.transformOrigin = '';
+                container.style.width = '';
+                container.style.height = '';
+                container.style.position = '';
+                container.style.top = '';
+                container.style.left = '';
+                container.style.marginTop = '';
+                container.style.marginLeft = '';
+            }
+        }
+
+        // 初期化時に回転を適用
+        applyRotation();
+
+        // ウィンドウサイズ変更時に回転を再適用
+        window.addEventListener('resize', () => {
+            setTimeout(applyRotation, 100);
+        });
+
         // オリエンテーション変更時の対応
         window.addEventListener('orientationchange', () => {
             setTimeout(() => {
                 // レイアウトの再計算を強制
                 const container = document.getElementById('clock-container');
                 container.style.minHeight = '100vh';
+                applyRotation();
             }, 100);
         });
     </script>
